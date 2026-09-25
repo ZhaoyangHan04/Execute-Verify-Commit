@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.25", "editables>=0.5"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evc-framework"
+version = "0.1.0"
+description = "Execution-grounded verification before committing agent actions."
+requires-python = ">=3.12,<3.14"
+dependencies = ["jsonschema>=4.20,<5", "openai>=1.109.0,<2"]
+
+[project.scripts]
+evc-run = "experiments.run:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["shadow-verifier/src/shadow_verifier", "workflow", "experiments"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"configs/paper.json" = "experiments/paper.json"

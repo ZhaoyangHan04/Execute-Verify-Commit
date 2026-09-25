@@ -1,0 +1,72 @@
+{
+  "seeds": [42, 43, 44, 45],
+  "producer_models": ["qwen3.8-max", "glm-5.2", "kimi-k3"],
+  "default_producer": "qwen3.8-max",
+  "default_reviewer": "qwen3.8-max",
+  "default_setting": "b1",
+  "generation": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "enable_thinking": false,
+    "max_completion_tokens": 8192,
+    "timeout_seconds": 300.0,
+    "kimi-k3": {"sampling": "native", "generation_seed": null}
+  },
+  "review": {
+    "prompt": "plain_checks_v1",
+    "max_completion_tokens": 512,
+    "seed_mode": "fixed",
+    "include_tool_list": true,
+    "policy_unit_tests": false,
+    "candidate_effect_visibility": "full",
+    "context": "public_history_policy_action_candidate_effect",
+    "completion_check": false
+  },
+  "settings": {
+    "baseline": {"mode": "baseline", "budget": 1, "temperature": 0.0},
+    "b1": {"mode": "shadow", "budget": 1, "temperature": 0.0},
+    "b3": {"mode": "shadow", "budget": 3, "temperature": 0.3},
+    "b5": {"mode": "shadow", "budget": 5, "temperature": 0.3},
+    "b7": {"mode": "shadow", "budget": 7, "temperature": 0.3},
+    "prob_es": {
+      "mode": "shadow", "budget": 5, "temperature": 0.0,
+      "soft_label_output": true, "probability_aggregation": "mean_probability",
+      "probability_threshold": 0.7, "probability_early_stop": true,
+      "early_reject_below": 0.3, "early_approve_above": 0.7
+    },
+    "jev": {"mode": "shadow", "budget": 1, "temperature": 0.0, "reviewer": "jev-1.13.0"},
+    "hidden_effect": {"mode": "shadow", "budget": 1, "temperature": 0.0, "candidate_effect_visibility": "hidden"}
+  },
+  "simulator": {
+    "paper_model": "qwen3.8-max", "temperature": 0.0,
+    "max_completion_tokens": 8192,
+    "runtime_models": {"tau_bench": "qwen-max", "tau2": "qwen-max", "state_bench": "qwen3.8-max"}
+  },
+  "outcome_judge": {
+    "model": "qwen3.8-max", "temperature": 0.0, "top_p": 1.0,
+    "enable_thinking": false, "tau2_max_completion_tokens": 2048,
+    "tau2_seed": 42, "state_max_completion_tokens": 8192,
+    "state_seed": "outer_seed"
+  },
+  "benchmarks": {
+    "tau_bench": {
+      "domains": ["retail", "airline"], "split": "test", "max_steps": 30,
+      "source": "https://github.com/sierra-research/tau-bench",
+      "revision": "59a200c6d575d595120f1cb70fea53cef0632f6b",
+      "patch": "patches/tau_bench_cabin.patch", "directory": "external/tau-bench"
+    },
+    "tau2": {
+      "domains": ["airline", "retail", "telecom"], "split": "base", "max_steps": 200,
+      "max_errors": 10, "episode_timeout_seconds": 1800.0,
+      "source": "https://github.com/sierra-research/tau2-bench",
+      "revision": "1eceb0453fe2effa1ba26b6a51fc52b966944ec1",
+      "patch": "patches/tau2_retail_variant.patch", "directory": "external/tau2-bench"
+    },
+    "state_bench": {
+      "domains": ["customer_support", "shopping_assistant", "travel"], "split": "test", "max_tool_rounds": 16,
+      "source": "https://github.com/microsoft/STATE-Bench",
+      "revision": "5644b1838d96bc4483da29642d058ecaa6f80f7f",
+      "directory": "external/state-bench"
+    }
+  }
+}

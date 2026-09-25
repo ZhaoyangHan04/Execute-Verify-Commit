@@ -1,0 +1,12 @@
+diff --git a/src/tau2/domains/retail/tools.py b/src/tau2/domains/retail/tools.py
+index eba01ab..18b8d67 100644
+--- a/src/tau2/domains/retail/tools.py
++++ b/src/tau2/domains/retail/tools.py
+@@ -534,6 +534,7 @@ class RetailTools(ToolKitBase):  # Tools
+             item = next((item for item in order.items if item.item_id == item_id), None)
+             if item is None:
+                 raise ValueError(f"Item {item_id} not found")
++            variant = self._get_variant(item.product_id, new_item_id)
+             item.item_id = new_item_id
+             item.price = variant.price
+             item.options = variant.options

@@ -1,0 +1,11 @@
+diff --git a/tau_bench/envs/airline/tools/update_reservation_flights.py b/tau_bench/envs/airline/tools/update_reservation_flights.py
+index 388f0ce..bf808a0 100644
+--- a/tau_bench/envs/airline/tools/update_reservation_flights.py
++++ b/tau_bench/envs/airline/tools/update_reservation_flights.py
+@@ -84,5 +84,6 @@ class UpdateReservationFlights(Tool):
+                     "amount": total_price,
+                 }
+             )
++        reservation["cabin"] = cabin
+         # do not make flight database update here, assume it takes time to be updated
+         return json.dumps(reservation)
