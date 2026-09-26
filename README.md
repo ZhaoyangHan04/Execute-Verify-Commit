@@ -1,64 +1,73 @@
-# Execute–Verify–Commit (EVC)
+# EVC
 
-Implementation-only companion: core method, benchmark adapters, and paper settings.
-No benchmark data, credentials, experiment outputs, cached responses, or historical
-results are included. This is not a complete historical-results reproduction package.
+Official repository for **Execute–Verify–Commit: Action-level Verification for Long-Horizon Agents**.
 
-## Where to look
+## Method
 
-| Path | Contents |
+A tool call can execute successfully yet leave the environment in a state that
+conflicts with the user's request or prevents later steps from succeeding.
+**EVC separates execution from commitment:** an acting agent's proposed
+state-changing action is executed once in an isolated environment fork. A
+reviewer checks the actual tool output and state changes against the request,
+conversation history, operating rules, and tool schemas.
+
+![Execute–Verify–Commit: isolated execution, effect review, and commitment or corrective feedback](assets/evc-overview.svg)
+
+Approval commits the exact reviewed state without re-executing the action and
+returns the native tool result. Rejection discards the candidate changes and
+returns specific feedback, so the agent can revise its next action from the
+unchanged live state. EVC is training-free and preserves the acting agent's
+planning loop; read-only calls, user-side actions, and ordinary conversation
+continue through their native execution paths.
+
+## Code and assets
+
+| Entry | Path |
 | --- | --- |
-| `shadow-verifier/src/shadow_verifier/runtime.py` | Stage once; review; publish that exact candidate or discard it. Majority voting and probability-based early stopping. |
-| `shadow-verifier/src/shadow_verifier/reviewers/` | Current rubric, hard/probability output contracts, and reviewer-visible evidence projection. |
-| `shadow-verifier/src/shadow_verifier/backends/` | Generative API transport, Jev typed decisions and fixed category feedback. |
-| `workflow/{tau_bench,tau2,state_bench}/` | Dataset loading, isolated execution, native observations, and final evaluation. |
-| `configs/paper.json` | Models, seeds, role-specific generation limits, task budgets, upstream revisions. |
-| `patches/` | Cabin persistence and retail multi-item variant fixes, applied equally to baseline and EVC. |
-| `experiments/` | Explicit configuration resolver and task-level launchers. |
-| `tests/` | Synthetic offline checks; no benchmark examples. |
+| Execute–review–commit loop and decision aggregation | [`runtime.py`](shadow-verifier/src/shadow_verifier/runtime.py) |
+| Environment and reviewer interfaces | [`protocols.py`](shadow-verifier/src/shadow_verifier/protocols.py) |
+| Review prompts and evidence projection | [`reviewers/`](shadow-verifier/src/shadow_verifier/reviewers/) |
+| LLM and Jev reviewer backends | [`backends/`](shadow-verifier/src/shadow_verifier/backends/) |
+| Benchmark integration | [`τ-bench`](workflow/tau_bench/), [`τ²`](workflow/tau2/), [`STATE`](workflow/state_bench/) |
+| Paper configuration | [`configs/paper.json`](configs/paper.json) |
+| Experiment entry point | [`experiments/run.py`](experiments/run.py) |
+| Method figure | [`assets/evc-overview.svg`](assets/evc-overview.svg) |
+| Local benchmark checkouts / generated runs | `external/` / `outputs/` |
 
-## Configure and inspect
+## Quick start
 
-Use Python 3.12 or 3.13 in an isolated environment, then `python -m pip install -e .`.
+Use Python 3.12 or 3.13. Install EVC and inspect the resolved configuration:
 
 ```bash
-# No API calls or data downloads: prints the complete resolved configuration.
+python -m pip install -e .
 python -m experiments.run --benchmark tau_bench
-python -m experiments.run --benchmark tau2 --producer glm-5.2 --reviewer self --setting b1
-python -m experiments.run --benchmark state_bench --setting prob_es --seeds 42
 python -m unittest discover -s tests -v
 ```
 
-Default: Qwen3.8-max producer/reviewer, B1, seeds 42–45, full public context and
-tool list, no policy unit tests, no completion check. `baseline` bypasses review;
-`b1` uses one hard decision; `b3/b5/b7` use strict majority. `prob_es` samples at
-most five probabilities: first `p<0.3` rejects or `p>0.7` approves; otherwise the
-mean must exceed 0.7. `hidden_effect` hides only candidate-effect evidence.
-These compute/mechanism settings use Qwen self-review, as in the paper.
-`jev` uses Jev-1.13.0 approval probability and rejection-category choices; it
-returns fixed category feedback, not a generated explanation.
+The default uses Qwen3.8-max as acting agent and reviewer, one binary review per
+candidate action (B1), and seeds 42–45. Change `--producer`, `--reviewer`,
+`--setting`, or `--seeds`; `--reviewer self` selects self-review. Role-specific
+parameters and task budgets are defined in [`configs/paper.json`](configs/paper.json).
 
-Generative B1 and probability review use temperature 0; multi-vote hard review
-uses 0.3. Kimi-K3 uses native sampling without a generation seed. Producers are
-capped at 8,192 output tokens and generative reviewers at 512. The outcome judge
-stays Qwen3.8-max, independent of reviewer choice. The paper's simulator name is
-Qwen3.8-max; the confirmed runtime alias remains `qwen-max` for τ/τ².
+| Setting | Review rule |
+| --- | --- |
+| `baseline` | Native execution without review |
+| `b1` | One binary review |
+| `b3`, `b5`, `b7` | Strict majority of 3, 5, or 7 reviews |
+| `prob_es` | Up to five probability reviews; stop on `p<0.3` or `p>0.7`, otherwise approve only if the mean exceeds 0.7 |
+| `jev` | Jev approval probability and fixed rejection-category feedback |
+| `hidden_effect` | B1 with the candidate's execution effects hidden from the reviewer |
 
-## Optional execution with external data
+Prepare a benchmark, set `DASHSCOPE_API_KEY` in the process environment, and run:
 
 ```bash
-# Explicitly downloads the public benchmark into ignored external/ and applies its patch.
 python -m experiments.prepare tau_bench
 python -m pip install -e external/tau-bench
-
-# Set DASHSCOPE_API_KEY in your process environment. Jev also needs TYPESAFE_API_KEY.
-# Choose task IDs from your installed official split; four seeds run by default.
 python -m experiments.run --benchmark tau_bench --domain retail --tasks 0 --setting b1 --execute
 ```
 
-Prepare `tau2` or `state_bench` similarly, installing `external/tau2-bench` or
-`external/state-bench`. Use a separate environment if upstream dependencies conflict.
-For STATE, task IDs must be taken from its official test split. `--workers`
-controls concurrent trajectories (default 4); `--output` defaults to ignored
-`outputs/`. API errors are surfaced, not silently scored as failures. Credentials
-are read only from environment variables. Do not commit generated directories.
+Use `tau2` or `state_bench` with their corresponding `external/tau2-bench` or
+`external/state-bench` checkout. Choose task IDs from the installed benchmark's
+official split. Jev additionally uses `TYPESAFE_API_KEY`. `--workers` controls
+parallel trajectories, and `--output` selects the output directory. Without
+`--execute`, the launcher prints the configuration without making model calls.
