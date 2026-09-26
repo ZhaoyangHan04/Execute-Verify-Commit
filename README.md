@@ -1,4 +1,4 @@
-# EVC
+# Execute-Verify-Commit
 
 Official repository for **Execute–Verify–Commit: Action-level Verification for Long-Horizon Agents**.
 
